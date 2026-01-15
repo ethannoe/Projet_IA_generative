@@ -1,0 +1,37 @@
+{
+  "likert": {
+    "python_level": 1,
+    "ml_level": 1,
+    "nlp_level": 1,
+    "pm_level": 1,
+    "etl_level": 1,
+    "comms_level": 5,
+    "da_analysis_level": 5,
+    "da_viz_level": 5,
+    "da_biz_level": 5
+  },
+  "qcm_single": "quotidienne",
+  "qcm_multi": [
+    "sql"
+  ],
+  "checkbox_skills": [
+    "analyse exploratoire (EDA)",
+    "dashboard Streamlit"
+  ],
+  "guided": {
+    "has_prod_model": "non",
+    "works_team": "oui",
+    "big_data": "oui",
+    "prod_app": "non",
+    "advanced_nlp": "non",
+    "collab_business": "oui"
+  },
+  "free_text": "Analyse des logs clients et dashboards de suivi.",
+  "ambitions": "Devenir Data Scientist axé NLP",
+  "proj_tech": "Décris un projet technique ou data dont tu es particulièrement fier (contexte, objectif, technologies utilisées, résultats).",
+  "prob_complex": "Explique une situation où tu as dû résoudre un problème complexe lié aux données, au machine learning ou à l’IA.",
+  "model_build": "As-tu déjà conçu, entraîné ou amélioré un modèle de machine learning ou NLP ? Décris ta démarche.",
+  "projection": "Vers quels types de rôles ou missions souhaites-tu évoluer à moyen terme ?",
+  "enrichment_opt": true,
+  "timestamp": "2026-01-14T22:02:32.495247"
+}

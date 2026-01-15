@@ -1,0 +1,12 @@
+question,response
+likert,"{""python_level"": 5, ""ml_level"": 5, ""nlp_level"": 5, ""pm_level"": 5, ""etl_level"": 5, ""comms_level"": 5, ""da_analysis_level"": 5, ""da_viz_level"": 5, ""da_biz_level"": 5}"
+free_text,
+ambitions,
+proj_tech,
+prob_complex,
+model_build,
+projection,
+guided,"{""has_prod_model"": ""oui"", ""works_team"": ""oui"", ""big_data"": ""oui"", ""prod_app"": ""oui"", ""advanced_nlp"": ""oui"", ""collab_business"": ""oui""}"
+qcm_single,quotidienne
+qcm_multi,"[""pandas"", ""sql"", ""spark"", ""mlflow"", ""airflow"", ""powerbi"", ""tableau"", ""streamlit""]"
+checkbox_skills,"[""analyse exploratoire (EDA)"", ""dashboard Streamlit"", ""feature engineering (création de variables)"", ""visualisation de données"", ""pipeline Airflow"", ""suivi d'expériences MLflow"", ""embeddings NLP""]"

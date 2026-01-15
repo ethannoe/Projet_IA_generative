@@ -1,0 +1,86 @@
+[
+  {
+    "block_id": "da",
+    "block_name": "Data Analysis",
+    "weight": 1.1,
+    "skills": [
+      "nettoyer des jeux de données avec pandas",
+      "analyse exploratoire des données",
+      "statistiques descriptives",
+      "visualisation de données avec matplotlib",
+      "création de dashboards avec Streamlit",
+      "requêtes SQL",
+      "contrôles de qualité des données"
+    ]
+  },
+  {
+    "block_id": "ml",
+    "block_name": "Machine Learning",
+    "weight": 1.2,
+    "skills": [
+      "feature engineering / création de variables",
+      "entraîner des modèles de régression et classification",
+      "évaluation et validation de modèles",
+      "ajustement d'hyperparamètres",
+      "cross-validation",
+      "pipelines scikit-learn",
+      "modèles interprétables"
+    ]
+  },
+  {
+    "block_id": "nlp",
+    "block_name": "Natural Language Processing",
+    "weight": 1.0,
+    "skills": [
+      "nettoyage et tokenisation de texte",
+      "embeddings avec Sentence Transformers",
+      "reconnaissance d'entités nommées",
+      "modélisation de thèmes",
+      "recherche de similarité",
+      "conception de prompts",
+      "génération augmentée par la recherche"
+    ]
+  },
+  {
+    "block_id": "de",
+    "block_name": "Data Engineering",
+    "weight": 1.0,
+    "skills": [
+      "construire et superviser des pipelines de données",
+      "ETL avec Python",
+      "orchestration avec Airflow",
+      "modélisation de données",
+      "bases du stockage cloud",
+      "bases de Spark",
+      "observabilité des workflows"
+    ]
+  },
+  {
+    "block_id": "pm",
+    "block_name": "Project Management",
+    "weight": 0.9,
+    "skills": [
+      "communication avec les parties prenantes",
+      "cérémonies Agile",
+      "définition de roadmap",
+      "gestion des risques",
+      "techniques de priorisation",
+      "rédaction de user stories",
+      "mesure d'impact"
+    ]
+  },
+  {
+    "block_id": "mlops",
+    "block_name": "MLOps",
+    "weight": 1.1,
+    "skills": [
+      "suivi d'expériences",
+      "versionning de modèles",
+      "CI/CD pour le ML",
+      "monitoring de modèles",
+      "déploiement/serving de modèles",
+      "containerisation avec Docker",
+      "optimisation performance/latence"
+    ]
+  }
+]

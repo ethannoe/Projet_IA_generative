@@ -1,0 +1,38 @@
+[
+  {
+    "job_id": "data_analyst",
+    "job_name": "Data Analyst",
+    "required_skills": ["sql", "data_viz", "statistics"],
+    "optional_skills": ["bi_tools", "eda", "python", "communication"]
+  },
+  {
+    "job_id": "bi_analyst",
+    "job_name": "BI Analyst",
+    "required_skills": ["sql", "bi_tools", "data_viz"],
+    "optional_skills": ["statistics", "communication"]
+  },
+  {
+    "job_id": "ml_engineer",
+    "job_name": "ML Engineer",
+    "required_skills": ["ml", "python", "mlops"],
+    "optional_skills": ["docker", "cicd", "monitoring", "mlflow"]
+  },
+  {
+    "job_id": "mlops_engineer",
+    "job_name": "MLOps Engineer",
+    "required_skills": ["mlops", "docker", "cicd", "monitoring"],
+    "optional_skills": ["mlflow", "airflow", "python"]
+  },
+  {
+    "job_id": "data_engineer",
+    "job_name": "Data Engineer",
+    "required_skills": ["etl", "airflow", "spark"],
+    "optional_skills": ["sql", "python", "mlops"]
+  },
+  {
+    "job_id": "nlp_engineer",
+    "job_name": "NLP Engineer",
+    "required_skills": ["nlp", "ml", "python"],
+    "optional_skills": ["mlops", "docker"]
+  }
+]

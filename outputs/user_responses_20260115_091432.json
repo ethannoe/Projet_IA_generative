@@ -1,0 +1,34 @@
+{
+  "likert": {
+    "python_level": 1,
+    "ml_level": 5,
+    "nlp_level": 1,
+    "pm_level": 1,
+    "etl_level": 1,
+    "comms_level": 1,
+    "da_analysis_level": 1,
+    "da_viz_level": 1,
+    "da_biz_level": 1
+  },
+  "free_text": "",
+  "ambitions": "",
+  "proj_tech": "",
+  "prob_complex": "",
+  "model_build": "",
+  "projection": "",
+  "guided": {
+    "has_prod_model": "oui",
+    "works_team": "oui",
+    "big_data": "oui",
+    "prod_app": "non",
+    "advanced_nlp": "non",
+    "collab_business": "non"
+  },
+  "qcm_single": "quotidienne",
+  "qcm_multi": [
+    "airflow"
+  ],
+  "checkbox_skills": [
+    "suivi d'expériences MLflow"
+  ]
+}

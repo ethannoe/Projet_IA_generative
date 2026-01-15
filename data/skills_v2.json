@@ -1,0 +1,20 @@
+[
+  {"skill_id": "sql", "skill_name": "SQL", "tags": ["sql", "database", "requêtes"]},
+  {"skill_id": "data_viz", "skill_name": "Data Visualization", "tags": ["viz", "visualisation", "dashboard", "chart", "plot"]},
+  {"skill_id": "statistics", "skill_name": "Statistics", "tags": ["stat", "stats", "probability"]},
+  {"skill_id": "bi_tools", "skill_name": "BI Tools", "tags": ["powerbi", "tableau", "looker", "bi"]},
+  {"skill_id": "eda", "skill_name": "Exploratory Data Analysis", "tags": ["eda", "exploration", "analyse exploratoire"]},
+  {"skill_id": "python", "skill_name": "Python & Pandas", "tags": ["python", "pandas"]},
+  {"skill_id": "ml", "skill_name": "Machine Learning", "tags": ["ml", "regression", "classification", "sklearn"]},
+  {"skill_id": "mlops", "skill_name": "MLOps", "tags": ["mlops", "deployment", "serving", "monitoring"]},
+  {"skill_id": "docker", "skill_name": "Docker & Containers", "tags": ["docker", "container"]},
+  {"skill_id": "cicd", "skill_name": "CI/CD", "tags": ["cicd", "ci", "cd", "pipeline"]},
+  {"skill_id": "monitoring", "skill_name": "Monitoring", "tags": ["monitoring", "observability"]},
+  {"skill_id": "mlflow", "skill_name": "MLflow", "tags": ["mlflow", "experimentation"]},
+  {"skill_id": "airflow", "skill_name": "Airflow", "tags": ["airflow", "orchestration"]},
+  {"skill_id": "spark", "skill_name": "Spark", "tags": ["spark"]},
+  {"skill_id": "etl", "skill_name": "ETL / Data Pipelines", "tags": ["etl", "pipeline", "ingestion"]},
+  {"skill_id": "nlp", "skill_name": "Natural Language Processing", "tags": ["nlp", "text", "embedding", "transformer"]},
+  {"skill_id": "communication", "skill_name": "Communication", "tags": ["communication", "storytelling", "present"]},
+  {"skill_id": "product", "skill_name": "Product/PM", "tags": ["pm", "product", "roadmap", "agile"]}
+]

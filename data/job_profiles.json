@@ -1,0 +1,72 @@
+[
+  {
+    "job_id": "data_analyst",
+    "job_name": "Data Analyst",
+    "required_blocks": [
+      {"block_id": "da", "weight": 1.2},
+      {"block_id": "pm", "weight": 0.6}
+    ]
+  },
+  {
+    "job_id": "bi_analyst",
+    "job_name": "BI Analyst",
+    "required_blocks": [
+      {"block_id": "da", "weight": 1.0},
+      {"block_id": "de", "weight": 0.8},
+      {"block_id": "pm", "weight": 0.6}
+    ]
+  },
+  {
+    "job_id": "data_scientist",
+    "job_name": "Data Scientist",
+    "required_blocks": [
+      {"block_id": "ml", "weight": 1.1},
+      {"block_id": "da", "weight": 0.9},
+      {"block_id": "mlops", "weight": 0.6}
+    ]
+  },
+  {
+    "job_id": "ml_engineer",
+    "job_name": "ML Engineer",
+    "required_blocks": [
+      {"block_id": "ml", "weight": 1.0},
+      {"block_id": "mlops", "weight": 1.0},
+      {"block_id": "de", "weight": 0.7}
+    ]
+  },
+  {
+    "job_id": "nlp_engineer",
+    "job_name": "NLP Engineer",
+    "required_blocks": [
+      {"block_id": "nlp", "weight": 1.1},
+      {"block_id": "ml", "weight": 0.9},
+      {"block_id": "mlops", "weight": 0.6}
+    ]
+  },
+  {
+    "job_id": "data_engineer",
+    "job_name": "Data Engineer",
+    "required_blocks": [
+      {"block_id": "de", "weight": 1.2},
+      {"block_id": "mlops", "weight": 0.7},
+      {"block_id": "pm", "weight": 0.5}
+    ]
+  },
+  {
+    "job_id": "ai_pm",
+    "job_name": "AI Product Manager",
+    "required_blocks": [
+      {"block_id": "pm", "weight": 1.2},
+      {"block_id": "ml", "weight": 0.8},
+      {"block_id": "nlp", "weight": 0.6}
+    ]
+  },
+  {
+    "job_id": "junior_analyst",
+    "job_name": "Junior Analyst",
+    "required_blocks": [
+      {"block_id": "da", "weight": 0.9},
+      {"block_id": "pm", "weight": 0.4}
+    ]
+  }
+]
