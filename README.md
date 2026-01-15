@@ -81,21 +81,6 @@ ollama pull phi3:mini
 
 ## Profils de démonstration (pré-remplissage suggéré)
 
-### Use Case 1 – Data Scientist Confirmé
-- Python, pandas, numpy, dashboards, régression & classification, NLP basique (tokenization, embeddings)
-- Réponses clés : Likert élevés sur ML/NLP/Pipelines, guidées « oui » pour prod/app & bibliothèques NLP, texte libre mentionnant modèles + dashboards.
-- Attendu : Coverage ≈ 0.75–0.85 ; métiers : Data Scientist, ML Engineer, NLP Engineer.
-
-### Use Case 2 – ML Engineer / MLOps Junior
-- Modélisation ML, pipelines, déploiement, peu de NLP
-- Réponses clés : Likert fort en pipelines/ML/MLops, guidées « oui » sur déploiement et big data, NLP modéré.
-- Attendu : Coverage ≈ 0.65–0.75 ; métiers : ML Engineer, Data Engineer, Data Scientist.
-
-### Use Case 3 – Analyste Junior / Reconversion
-- SQL, Excel, Python basique, visualisation, très peu de ML
-- Réponses clés : Likert moyens/faibles en ML, forts en data/communication, guidées surtout « non » sur prod/LLM, texte libre orienté reporting.
-- Attendu : Coverage ≈ 0.45–0.60 ; métiers : Data Analyst, BI Analyst, Junior Data Scientist.
-
 ## Prompts (résumés)
 - **Enrichissement** (optionnel) : réécrire une phrase trop courte sans inventer, ou indiquer manque d’info.
 - **Plan de progression** : étapes 4-8 semaines, basé sur compétences manquantes, référentiel uniquement, bullets + jalons.
