@@ -1,38 +1,32 @@
 [
   {
-    "job_id": "data_analyst",
-    "job_name": "Data Analyst",
-    "required_skills": ["sql", "data_viz", "statistics"],
-    "optional_skills": ["bi_tools", "eda", "python", "communication"]
+    "job_id":"data_analyst",
+    "job_name":"Data Analyst",
+    "required_skills":["sql","bi_tools","data_viz","stats_foundations","kpi_definition","data_storytelling"],
+    "optional_skills":["excel","ab_testing","python","communication","requirements"]
   },
   {
-    "job_id": "bi_analyst",
-    "job_name": "BI Analyst",
-    "required_skills": ["sql", "bi_tools", "data_viz"],
-    "optional_skills": ["statistics", "communication"]
+    "job_id":"data_engineer",
+    "job_name":"Data Engineer",
+    "required_skills":["sql","etl_elt","data_modeling","orchestration","data_warehouse","data_quality","python","git"],
+    "optional_skills":["spark","streaming","cloud","ci_cd","observability"]
   },
   {
-    "job_id": "ml_engineer",
-    "job_name": "ML Engineer",
-    "required_skills": ["ml", "python", "mlops"],
-    "optional_skills": ["docker", "cicd", "monitoring", "mlflow"]
+    "job_id":"mlops_engineer",
+    "job_name":"ML Engineer / MLOps",
+    "required_skills":["python","ml_basics","training_eval","model_deployment","docker","ci_cd","observability"],
+    "optional_skills":["kubernetes","mlflow","model_monitoring","feature_engineering","cloud","nlp_basics"]
   },
   {
-    "job_id": "mlops_engineer",
-    "job_name": "MLOps Engineer",
-    "required_skills": ["mlops", "docker", "cicd", "monitoring"],
-    "optional_skills": ["mlflow", "airflow", "python"]
+    "job_id":"backend_engineer",
+    "job_name":"Backend Engineer",
+    "required_skills":["api_design","backend_framework","db_design","testing","git","auth_security","system_design"],
+    "optional_skills":["performance","caching","cloud","ci_cd","observability","clean_code"]
   },
   {
-    "job_id": "data_engineer",
-    "job_name": "Data Engineer",
-    "required_skills": ["etl", "airflow", "spark"],
-    "optional_skills": ["sql", "python", "mlops"]
-  },
-  {
-    "job_id": "nlp_engineer",
-    "job_name": "NLP Engineer",
-    "required_skills": ["nlp", "ml", "python"],
-    "optional_skills": ["mlops", "docker"]
+    "job_id":"devops_cloud_engineer",
+    "job_name":"DevOps / Cloud Engineer",
+    "required_skills":["linux","docker","ci_cd","iac","cloud","networking","observability"],
+    "optional_skills":["kubernetes","sre_reliability","auth_security","python","git"]
   }
 ]

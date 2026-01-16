@@ -107,15 +107,47 @@ def build_enrichment_prompt(user_text: str, context: str) -> str:
     )
 
 
-def build_plan_prompt(context_pack: str, missing_skills: Dict[str, Any]) -> str:
+def build_plan_prompt(plan_context: Dict[str, Any]) -> str:
+    """Construit un prompt data-driven pour le plan de progression.
+
+    Attend un dict plan_context contenant :
+    - job: {job_name, job_id, score, coverage}
+    - top_skills: list[{skill_name, score}]
+    - weak_skills: list[{skill_name, score}]
+    - threshold: float (pour marquer les faiblesses)
+    """
+
+    job = plan_context.get("job", {}) or {}
+    top_skills = plan_context.get("top_skills", []) or []
+    weak_skills = plan_context.get("weak_skills", []) or []
+    coverage = job.get("coverage")
+    threshold = plan_context.get("threshold")
+
+    def fmt_skills(skills):
+        return "\n".join([f"- {s.get('skill_name', 'compétence')} ({s.get('score', 0):.1f}%)" for s in skills])
+
+    top_block = fmt_skills(top_skills)
+    weak_block = fmt_skills(weak_skills)
+
+    coverage_txt = f"{coverage:.1f}%" if coverage is not None else "N/A"
+    threshold_txt = f"{threshold:.0f}%" if threshold is not None else "60%"
+
     return (
-        "Tu es un coach IA. Génère un plan de progression structuré (4 à 8 semaines) basé sur les écarts détectés.\n"
-        "Utilise uniquement les compétences du référentiel et les écarts fournis.\n"
-        "Si une info est manquante, dis-le.\n"
-        "Format: étapes hebdomadaires avec objectifs, activités, jalons.\n"
-        f"Contexte RAG:\n{context_pack}\n"
-        f"Compétences à renforcer: {json.dumps(missing_skills, ensure_ascii=False)}\n"
-        "Réponds en français, concis, listes à puces."
+        "Tu es coach carrière tech. Génère un plan de progression strictement aligné sur les résultats fournis.\n"
+        "Règles: utilise uniquement les données données (métier, forces, faiblesses), aucune généralité.\n"
+        "Langue: français. Ton: concret et actionnable.\n"
+        "Structure obligatoire:\n"
+        "- Objectif (métier cible)\n"
+        "- Forces actuelles (3 points max)\n"
+        "- Axes prioritaires (faiblesses principales)\n"
+        "- Plan 30 jours / 60 jours / 90 jours (actions liées aux faiblesses)\n"
+        "- Mini-projets recommandés (2 projets, chacun lié à une faiblesse)\n"
+        "- Ressources/Exercices (types uniquement, pas de liens)\n"
+        "Contraintes: chaque action doit citer la compétence faible ciblée; interdits: conseils vagues.\n"
+        f"Métier cible: {job.get('job_name', 'N/A')} (score {job.get('score', 0):.1f}%, coverage {coverage_txt})\n"
+        f"Forces (top compétences):\n{top_block}\n"
+        f"Faiblesses prioritaires (< seuil {threshold_txt} ou plus faibles):\n{weak_block}\n"
+        "Génère le plan maintenant en suivant la structure."
     )
 
 

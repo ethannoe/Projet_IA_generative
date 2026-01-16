@@ -1,4 +1,3 @@
-import hashlib
 import html
 import json
 from datetime import datetime
@@ -13,6 +12,7 @@ from src.genai_client import (
     is_ollama_available,
 )
 from src.utils.bio_ollama import generate_linkedin_bio_ollama
+from src.utils.scoring_v2 import build_inputs_from_session_state, compute_input_signature
 from src.viz import bar_top_jobs
 from ui.components import inject_css, stepper
 
@@ -27,34 +27,14 @@ steps = [
 
 
 BLOCK_LABELS = {
-    "analytics": "Analytics / Viz",
-    "ml": "Machine Learning",
-    "mlops": "MLOps / Ops",
-    "data_eng": "Data Engineering",
-    "nlp": "NLP",
-    "engineering": "Python / Dev",
-    "soft": "Communication / Produit",
-}
-
-SKILL_TO_BLOCK = {
-    "sql": "analytics",
-    "data_viz": "analytics",
-    "statistics": "analytics",
-    "bi_tools": "analytics",
-    "eda": "analytics",
-    "python": "engineering",
-    "ml": "ml",
-    "nlp": "nlp",
-    "mlops": "mlops",
-    "docker": "mlops",
-    "cicd": "mlops",
-    "monitoring": "mlops",
-    "mlflow": "mlops",
-    "etl": "data_eng",
-    "airflow": "data_eng",
-    "spark": "data_eng",
-    "communication": "soft",
-    "product": "soft",
+    "data_analysis": "Data Analysis / BI",
+    "product_communication": "Produit & communication",
+    "programming_foundations": "Fondations dev",
+    "data_engineering": "Data Engineering",
+    "mlops_ml_engineering": "ML Engineering / MLOps",
+    "backend_engineering": "Backend Engineering",
+    "devops_cloud": "DevOps / Cloud",
+    "security_reliability": "Sécurité & Fiabilité",
 }
 
 
@@ -71,12 +51,9 @@ def init_state():
         st.session_state["professional_bio_status"] = "idle"
     if "professional_bio_error" not in st.session_state:
         st.session_state["professional_bio_error"] = None
-def compute_signature(responses):
-    try:
-        payload = json.dumps(responses, sort_keys=True, ensure_ascii=False)
-    except TypeError:
-        payload = str(responses)
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+def compute_signature_from_state():
+    inputs = build_inputs_from_session_state(st.session_state)
+    return compute_input_signature(inputs)
 
 
 def debug_enabled():
@@ -102,34 +79,66 @@ def render_jobs_table(job_scores):
 
 def render_debug_panel(analysis):
     meta = analysis.get("meta", {})
-    debug = analysis.get("debug", {}) or {}
-    skill_scores = debug.get("skill_scores", [])
-    job_scores = debug.get("job_scores", [])
+    skill_scores = analysis.get("skill_scores", []) or []
+    job_scores = analysis.get("job_scores", []) or []
+    coverage = analysis.get("coverage_score")
+    top_job = job_scores[0] if job_scores else None
+    threshold = 60.0
+
+    coverage_breakdown = None
+    if top_job:
+        req = top_job.get("required_skills", []) or []
+        lookup = {s.get("skill_id"): s for s in skill_scores}
+        rows = []
+        covered = 0
+        for sid in req:
+            sc = lookup.get(sid, {}).get("score", 0.0)
+            if sc >= threshold:
+                covered += 1
+            rows.append({"skill_id": sid, "score": sc, "covered": sc >= threshold})
+        coverage_breakdown = {
+            "top_job_id": top_job.get("job_id"),
+            "top_job_name": top_job.get("job_name"),
+            "threshold": threshold,
+            "covered": covered,
+            "total": len(req),
+            "details": rows,
+        }
 
     st.markdown("### Debug résultats")
     st.json(
         {
-            "meta": meta,
+            "input_signature": meta.get("input_signature"),
             "inputs_resume": analysis.get("inputs_resume", {}),
-            "nb_skill_scores": len(skill_scores),
-            "nb_job_scores": len(job_scores),
+            "coverage_score": coverage,
+            "coverage_debug": coverage_breakdown,
         },
         expanded=False,
     )
 
     if job_scores:
-        st.markdown("#### Top métiers (brut)")
+        st.markdown("#### Top 5 métiers")
         st.dataframe(job_scores[:5], hide_index=True, use_container_width=True)
 
     if skill_scores:
-        st.markdown("#### Top compétences (brut)")
-        st.dataframe(skill_scores[:10], hide_index=True, use_container_width=True)
+        st.markdown("#### Top 10 compétences (sources)")
+        rows = [
+            {
+                "compétence": s.get("skill_name"),
+                "score": s.get("score"),
+                "auto_eval": (s.get("sources") or {}).get("auto_eval"),
+                "selected": (s.get("sources") or {}).get("selected"),
+                "text": (s.get("sources") or {}).get("text"),
+            }
+            for s in skill_scores[:10]
+        ]
+        st.dataframe(rows, hide_index=True, use_container_width=True)
 
 
 def aggregate_block_scores(skill_scores):
     buckets = {}
     for s in skill_scores or []:
-        block = SKILL_TO_BLOCK.get(s.get("skill_id"))
+        block = s.get("block_id")
         if not block:
             continue
         buckets.setdefault(block, []).append(s.get("score", 0) or 0)
@@ -261,8 +270,9 @@ def build_results_html(analysis_data: dict, bio_text: str | None, plan_text: str
                         block_map.setdefault(block_id, []).append(float(s.get("score", 0) or 0))
         block_rows = "".join(
                 [
-                        f"<tr><td>{html.escape(str(b))}</td><td>{fmt_num(sum(vals)/len(vals))}</td></tr>"
-                        for b, vals in block_map.items()
+            f"<tr><td>{html.escape(str(BLOCK_LABELS.get(b, b)))}" +
+            f"</td><td>{fmt_num(sum(vals)/len(vals))}</td></tr>"
+            for b, vals in block_map.items()
                 ]
         )
 
@@ -355,14 +365,59 @@ def compute_missing_skills_for_plan(analysis):
     return {"Compétences requises à renforcer": missing} if missing else {}
 
 
-def build_plan_context(analysis):
+PLAN_THRESHOLD = 60.0
+
+
+def build_plan_data(analysis):
     job_scores = analysis.get("job_scores", []) or []
     top_job = job_scores[0] if job_scores else {}
-    top_skills = (analysis.get("skill_scores", []) or [])[:5]
-    lines = [f"Métier recommandé: {top_job.get('job_name', 'N/A')} (score {top_job.get('score', 0):.1f})"]
-    if top_skills:
-        lines.append("Compétences fortes: " + ", ".join([f"{s.get('skill_name')} ({s.get('score',0):.0f})" for s in top_skills]))
-    return "\n".join(lines)
+    skill_scores = analysis.get("skill_scores", []) or []
+
+    # Forces: top 6 compétences
+    top_skills = skill_scores[:6]
+
+    # Faiblesses: prioriser required du top job (< threshold). Sinon, prendre les plus faibles globales.
+    lookup = {s.get("skill_id"): s for s in skill_scores}
+    required_ids = top_job.get("required_skills", []) or []
+    req_with_scores = [
+        {
+            "skill_id": sid,
+            "skill_name": lookup.get(sid, {}).get("skill_name", sid),
+            "score": float(lookup.get(sid, {}).get("score", 0.0)),
+        }
+        for sid in required_ids
+    ]
+    req_with_scores.sort(key=lambda x: x.get("score", 0.0))
+
+    weak_from_req = [s for s in req_with_scores if s.get("score", 0.0) < PLAN_THRESHOLD]
+    weak_skills = weak_from_req if weak_from_req else req_with_scores
+
+    # Compléter jusqu'à 6 avec les plus faibles globales si nécessaire
+    if len(weak_skills) < 6:
+        existing_ids = {w.get("skill_id") for w in weak_skills}
+        for s in sorted(skill_scores, key=lambda x: x.get("score", 0.0)):
+            if s.get("skill_id") in existing_ids:
+                continue
+            weak_skills.append({
+                "skill_id": s.get("skill_id"),
+                "skill_name": s.get("skill_name"),
+                "score": float(s.get("score", 0.0)),
+            })
+            existing_ids.add(s.get("skill_id"))
+            if len(weak_skills) >= 6:
+                break
+
+    return {
+        "job": {
+            "job_id": top_job.get("job_id"),
+            "job_name": top_job.get("job_name"),
+            "score": top_job.get("score"),
+            "coverage": analysis.get("coverage_score"),
+        },
+        "top_skills": [{"skill_name": s.get("skill_name"), "score": s.get("score", 0)} for s in top_skills],
+        "weak_skills": weak_skills[:6],
+        "threshold": PLAN_THRESHOLD,
+    }
 
 
 def render_plan_section(analysis):
@@ -371,13 +426,13 @@ def render_plan_section(analysis):
         st.warning("Plan de progression indisponible (Ollama non détecté).", icon="⚠️")
         return
 
-    missing = compute_missing_skills_for_plan(analysis)
-    context = build_plan_context(analysis)
+    plan_context = build_plan_data(analysis)
+    debug_mode = st.session_state.get("debug_mode", False)
 
     if st.button("Générer un plan de progression"):
         with st.spinner("Génération avec Ollama..."):
             try:
-                prompt = build_plan_prompt(context, missing)
+                prompt = build_plan_prompt(plan_context)
                 st.session_state["plan_output"] = generate_with_cache("plan_progression_v2", prompt)
             except GenAIUnavailable as e:  # noqa: BLE001
                 st.error(str(e))
@@ -385,6 +440,10 @@ def render_plan_section(analysis):
     if st.session_state.get("plan_output"):
         with st.expander("Plan de progression généré", expanded=True):
             st.markdown(st.session_state["plan_output"])
+
+    if debug_mode:
+        st.markdown("#### Debug plan (contexte envoyé)")
+        st.json(plan_context, expanded=False)
 
 
 def render_professional_bio_section(analysis):
@@ -440,7 +499,7 @@ def main():
 
     st.markdown("### Résultats")
     analysis = st.session_state.get("analysis_result_v2") or {}
-    current_sig = compute_signature(st.session_state.get("responses", {}))
+    current_sig = compute_signature_from_state()
     meta = analysis.get("meta", {}) if analysis else {}
     analysis_sig = meta.get("input_signature")
 
@@ -462,7 +521,9 @@ def main():
     with c1:
         st.metric("Coverage score", f"{coverage:.1f}%")
     with c2:
-        st.metric("Profil", analysis.get("summary_profile", {}).get("title", ""))
+        top_job = (analysis.get("job_scores", []) or [None])[0]
+        profile_label = top_job.get("job_name") if top_job else analysis.get("summary_profile", {}).get("title", "")
+        st.metric("Profil", profile_label)
     with c3:
         top_job = (analysis.get("job_scores", []) or [None])[0]
         if top_job:

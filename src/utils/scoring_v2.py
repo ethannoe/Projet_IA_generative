@@ -1,40 +1,123 @@
+from __future__ import annotations
+
 import hashlib
 import json
 import time
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Tuple
-
-import numpy as np
+from pathlib import Path
+from statistics import mean
+from typing import Any, Dict, Iterable, List, Mapping, Sequence, Tuple
 
 from src.genai_client import GenAIUnavailable, generate_with_cache, is_ollama_available
 
-DATA_JOBS_PATH = "data/jobs_v2.json"
-DATA_SKILLS_PATH = "data/skills_v2.json"
+ROOT_DIR = Path(__file__).resolve().parents[2]
+DATA_DIR = ROOT_DIR / "data"
+DATA_JOBS_PATH = DATA_DIR / "jobs_v2.json"
+DATA_SKILLS_PATH = DATA_DIR / "skills_v2.json"
+
+# Mapping likert keys to skills for auto-évaluation contribution
+SKILL_LIKERT_MAP: Dict[str, str] = {
+    "sql": "da_analysis_level",
+    "bi_tools": "da_viz_level",
+    "data_viz": "da_viz_level",
+    "stats_foundations": "da_analysis_level",
+    "kpi_definition": "da_biz_level",
+    "data_storytelling": "comms_level",
+    "excel": "da_analysis_level",
+    "ab_testing": "da_analysis_level",
+    "python": "python_level",
+    "git": "python_level",
+    "testing": "python_level",
+    "clean_code": "python_level",
+    "etl_elt": "etl_level",
+    "data_modeling": "etl_level",
+    "orchestration": "etl_level",
+    "data_warehouse": "etl_level",
+    "spark": "etl_level",
+    "streaming": "etl_level",
+    "data_quality": "etl_level",
+    "ml_basics": "ml_level",
+    "feature_engineering": "ml_level",
+    "training_eval": "ml_level",
+    "model_deployment": "ml_level",
+    "mlflow": "ml_level",
+    "model_monitoring": "ml_level",
+    "nlp_basics": "nlp_level",
+    "api_design": "python_level",
+    "backend_framework": "python_level",
+    "db_design": "da_analysis_level",
+    "auth_security": "pm_level",
+    "performance": "python_level",
+    "caching": "python_level",
+    "system_design": "pm_level",
+    "linux": "etl_level",
+    "docker": "etl_level",
+    "kubernetes": "etl_level",
+    "ci_cd": "etl_level",
+    "iac": "etl_level",
+    "cloud": "etl_level",
+    "observability": "etl_level",
+    "networking": "etl_level",
+    "sre_reliability": "etl_level",
+    "communication": "comms_level",
+    "requirements": "pm_level",
+}
+
+# Additional keyword hints for text and selection matches
+KEYWORD_OVERRIDES: Dict[str, List[str]] = {
+    "bi_tools": ["powerbi", "tableau", "looker", "bi"],
+    "data_viz": ["visualisation", "dashboard", "chart"],
+    "stats_foundations": ["stat", "probabilité", "probability"],
+    "kpi_definition": ["kpi", "metrics", "métriques"],
+    "data_storytelling": ["storytelling", "présentation", "restitution"],
+    "etl_elt": ["etl", "elt", "pipeline", "ingestion"],
+    "data_modeling": ["schema", "modélisation", "star schema", "snowflake"],
+    "orchestration": ["airflow", "prefect"],
+    "data_warehouse": ["warehouse", "bigquery", "snowflake", "redshift"],
+    "spark": ["spark"],
+    "streaming": ["kafka", "pubsub", "stream"],
+    "data_quality": ["qualité", "tests de données"],
+    "ml_basics": ["ml", "machine learning"],
+    "feature_engineering": ["feature", "variables"],
+    "training_eval": ["entrainement", "évaluation", "evaluation"],
+    "model_deployment": ["déploiement", "serving", "inférence", "api"],
+    "mlflow": ["mlflow"],
+    "model_monitoring": ["monitoring", "drift"],
+    "nlp_basics": ["nlp", "texte", "language"],
+    "api_design": ["api", "rest"],
+    "backend_framework": ["fastapi", "django", "node", "spring", "java", "framework"],
+    "db_design": ["base de données", "schema", "index"],
+    "auth_security": ["auth", "jwt", "oauth", "sécurité"],
+    "performance": ["performance", "optimisation"],
+    "caching": ["redis", "cache"],
+    "system_design": ["architecture", "system design"],
+    "docker": ["docker", "container"],
+    "kubernetes": ["kubernetes", "k8s"],
+    "ci_cd": ["ci", "cd", "pipeline"],
+    "iac": ["terraform", "iac"],
+    "cloud": ["aws", "gcp", "azure", "cloud"],
+    "observability": ["logs", "metrics", "traces", "observabilité"],
+    "networking": ["réseau", "network"],
+    "sre_reliability": ["sre", "fiabilité", "reliability"],
+    "communication": ["communication", "collaboration"],
+    "requirements": ["cadrage", "besoin"],
+}
 
 
-@dataclass
-class ScoringInputsV2:
-    responses: Dict[str, Any]
-    jobs: List[Dict[str, Any]]
-    skills: List[Dict[str, Any]]
-    use_ollama: bool = True
-
-
-def _load_json(path: str) -> Any:
-    with open(path, "r", encoding="utf-8") as f:
+def _load_json(path: Path) -> Any:
+    with path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def load_jobs_v2() -> List[Dict[str, Any]]:
+def load_jobs() -> List[Dict[str, Any]]:
     return _load_json(DATA_JOBS_PATH)
 
 
-def load_skills_v2() -> List[Dict[str, Any]]:
+def load_skills() -> List[Dict[str, Any]]:
     return _load_json(DATA_SKILLS_PATH)
 
 
-def sha_signature(payload: Any) -> str:
+def compute_input_signature(payload: Any) -> str:
     try:
         data = json.dumps(payload, sort_keys=True, ensure_ascii=False)
     except TypeError:
@@ -42,230 +125,315 @@ def sha_signature(payload: Any) -> str:
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
-def _normalize_text(s: str) -> str:
-    return s.lower().strip()
+def _normalize(text: str | None) -> str:
+    return (text or "").lower().strip()
 
 
-def build_inputs_from_session(responses: Dict[str, Any]) -> Dict[str, Any]:
+def _auto_eval_score(value: Any) -> float:
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    v_clamped = min(5.0, max(1.0, v))
+    return ((v_clamped - 1.0) / 4.0) * 70.0  # 0..70
+
+
+def _skill_keywords(skill: Dict[str, Any]) -> List[str]:
+    keywords: List[str] = []
+    skill_id = _normalize(skill.get("skill_id"))
+    skill_name = _normalize(skill.get("skill_name"))
+    keywords.extend(skill_id.replace("_", " ").split())
+    keywords.extend(skill_name.replace("/", " ").split())
+    keywords.extend(KEYWORD_OVERRIDES.get(skill.get("skill_id", ""), []))
+    return [k for k in {_normalize(k) for k in keywords} if k]
+
+
+def _match_any(keywords: Iterable[str], text: str) -> bool:
+    return any(k in text for k in keywords)
+
+
+def build_inputs_from_session_state(session_state: Mapping[str, Any]) -> Dict[str, Any]:
+    responses = session_state.get("responses", {}) if hasattr(session_state, "get") else {}
     likert = responses.get("likert", {}) or {}
     selected_skills = responses.get("checkbox_skills", []) or []
-    qcm_multi = responses.get("qcm_multi", []) or []
-    guided = responses.get("guided", {}) or {}
+    tools = responses.get("qcm_multi", []) or []
 
-    text_fields = [
-        responses.get("free_text", ""),
-        responses.get("ambitions", ""),
-        responses.get("proj_tech", ""),
-        responses.get("prob_complex", ""),
-        responses.get("model_build", ""),
-        responses.get("projection", ""),
-    ]
-    texts = [t.strip() for t in text_fields if t and t.strip()]
-
-    experiences = texts  # reuse texts as experience evidence
+    text_fields = ["free_text", "ambitions", "proj_tech", "prob_complex", "model_build", "projection"]
+    texts = [responses.get(k, "") for k in text_fields if responses.get(k, "").strip()]
+    experiences = texts.copy()
 
     return {
         "likert": likert,
         "selected_skills": selected_skills,
-        "tools": qcm_multi,
-        "guided": guided,
+        "tools": tools,
         "texts": texts,
         "experiences": experiences,
+        "raw_responses": responses,
     }
 
 
-def _match_tags(skill: Dict[str, Any], corpus: List[str]) -> bool:
-    tags = [t.lower() for t in skill.get("tags", [])]
-    for c in corpus:
-        lc = _normalize_text(c)
-        if any(tag in lc for tag in tags):
-            return True
-    return False
-
-
-def _likert_to_score(val: int) -> float:
-    if not isinstance(val, (int, float)):
-        return 0.0
-    return float(np.clip((val - 1) / 4, 0, 1) * 60.0)  # 0..60 contribution
-
-
-def compute_skill_scores(inputs: Dict[str, Any], skills: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    likert = inputs.get("likert", {})
-    selected = [_normalize_text(s) for s in inputs.get("selected_skills", [])]
-    tools = [_normalize_text(s) for s in inputs.get("tools", [])]
-    texts = inputs.get("texts", []) or []
+def compute_skill_scores(inputs: Mapping[str, Any], skills: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    likert = inputs.get("likert", {}) or {}
+    selections = [_normalize(s) for s in (inputs.get("selected_skills", []) or [])]
+    tools = [_normalize(s) for s in (inputs.get("tools", []) or [])]
+    selected_pool = selections + tools
+    text_corpus = " ".join((inputs.get("texts", []) or []) + (inputs.get("experiences", []) or []))
+    text_corpus_norm = _normalize(text_corpus)
 
     skill_scores: List[Dict[str, Any]] = []
-
-    # map likert keys to tags
-    likert_tag_map = {
-        "python_level": ["python", "pandas"],
-        "ml_level": ["ml"],
-        "nlp_level": ["nlp", "text"],
-        "etl_level": ["etl", "pipeline"],
-        "da_analysis_level": ["sql", "eda"],
-        "da_viz_level": ["viz", "dashboard"],
-        "da_biz_level": ["communication", "product"],
-        "pm_level": ["product", "pm"],
-        "comms_level": ["communication"],
-    }
 
     for skill in skills:
         skill_id = skill.get("skill_id")
         name = skill.get("skill_name", skill_id)
-        tags = [t.lower() for t in skill.get("tags", [])]
+        block_id = skill.get("block_id")
 
-        selected_contrib = 40.0 if _normalize_text(name) in selected or any(tag in selected for tag in tags) else 0.0
-        if not selected_contrib and any(tag in tools for tag in tags):
-            selected_contrib = 25.0
+        auto_key = SKILL_LIKERT_MAP.get(skill_id, "")
+        auto_eval_contrib = _auto_eval_score(likert.get(auto_key)) if auto_key else 0.0
 
-        likert_contrib = 0.0
-        for key, taglist in likert_tag_map.items():
-            if any(tag in tags for tag in taglist):
-                likert_val = likert.get(key)
-                likert_contrib = max(likert_contrib, _likert_to_score(likert_val))
+        keywords = _skill_keywords(skill)
+        selection_hit = any(k in sel for sel in selected_pool for k in keywords) or any(
+            _normalize(name) in sel for sel in selected_pool
+        )
+        selected_contrib = 25.0 if selection_hit else 0.0
 
-        text_contrib = 0.0
-        if _match_tags(skill, texts):
-            text_contrib = 20.0
+        text_hit = _match_any(keywords, text_corpus_norm)
+        text_contrib = 15.0 if text_hit else 0.0
 
-        score = float(np.clip(selected_contrib + likert_contrib + text_contrib, 0.0, 100.0))
+        score = min(100.0, auto_eval_contrib + selected_contrib + text_contrib)
+
         skill_scores.append(
             {
                 "skill_id": skill_id,
                 "skill_name": name,
-                "score": score,
+                "block_id": block_id,
+                "score": float(score),
                 "sources": {
+                    "auto_eval": round(auto_eval_contrib, 2),
                     "selected": selected_contrib,
-                    "likert": likert_contrib,
                     "text": text_contrib,
                 },
             }
         )
 
-    skill_scores.sort(key=lambda x: x["score"], reverse=True)
+    skill_scores.sort(key=lambda s: s.get("score", 0), reverse=True)
     return skill_scores
 
 
-def compute_job_scores(skill_scores: List[Dict[str, Any]], jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def compute_job_scores(skill_scores: Sequence[Dict[str, Any]], jobs: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
     lookup = {s["skill_id"]: s for s in skill_scores}
     job_scores: List[Dict[str, Any]] = []
     for job in jobs:
-        req = job.get("required_skills", [])
-        opt = job.get("optional_skills", [])
-        req_scores = [lookup.get(sid, {}).get("score", 0.0) for sid in req]
-        opt_scores = [lookup.get(sid, {}).get("score", 0.0) for sid in opt]
-        req_avg = float(np.mean(req_scores)) if req_scores else 0.0
-        opt_avg = float(np.mean(opt_scores)) if opt_scores else 0.0
-        score = 0.7 * req_avg + 0.3 * opt_avg
-        coverage = 0.0
-        if req:
-            coverage = sum(1 for s in req if lookup.get(s, {}).get("score", 0) >= 50) / len(req) * 100.0
+        req_ids = job.get("required_skills", []) or []
+        opt_ids = job.get("optional_skills", []) or []
+        req_vals = [lookup.get(sid, {}).get("score", 0.0) for sid in req_ids]
+        opt_vals = [lookup.get(sid, {}).get("score", 0.0) for sid in opt_ids]
+        req_avg = float(mean(req_vals)) if req_vals else 0.0
+        opt_avg = float(mean(opt_vals)) if opt_vals else 0.0
+        job_score = 0.75 * req_avg + 0.25 * opt_avg
         job_scores.append(
             {
                 "job_id": job.get("job_id"),
                 "job_name": job.get("job_name"),
-                "score": float(np.clip(score, 0.0, 100.0)),
-                "coverage": float(np.clip(coverage, 0.0, 100.0)),
-                "required_skills": req,
-                "optional_skills": opt,
-                "required_scores": req_scores,
-                "optional_scores": opt_scores,
+                "score": round(float(job_score), 2),
+                "coverage": compute_coverage_value(req_ids, lookup),
+                "required_skills": req_ids,
+                "optional_skills": opt_ids,
+                "required_scores": req_vals,
+                "optional_scores": opt_vals,
             }
         )
-    job_scores.sort(key=lambda x: x["score"], reverse=True)
+    job_scores.sort(key=lambda j: j.get("score", 0), reverse=True)
     return job_scores
 
 
-def derive_level(score: float) -> str:
+def compute_coverage_value(required_skill_ids: Sequence[str], skill_lookup: Mapping[str, Dict[str, Any]], threshold: float = 60.0) -> float:
+    if not required_skill_ids:
+        return 0.0
+    hits = sum(1 for sid in required_skill_ids if skill_lookup.get(sid, {}).get("score", 0.0) >= threshold)
+    return round(hits / len(required_skill_ids) * 100.0, 2)
+
+
+def compute_coverage(top_job: Dict[str, Any] | None, skill_scores: Sequence[Dict[str, Any]], threshold: float = 60.0) -> float:
+    """Coverage = required skills >= threshold / total required * 100.
+
+    - Only required_skills are considered.
+    - Missing skills default to score 0 (not covered).
+    - If no required_skills, returns 0.0 (avoid inflating to 100%).
+    - Threshold expects skill scores on 0..100 scale.
+    """
+
+    if not top_job:
+        return 0.0
+    required = top_job.get("required_skills", []) or []
+    if not required:
+        return 0.0
+    lookup = {s["skill_id"]: s for s in skill_scores}
+    return compute_coverage_value(required, lookup, threshold)
+
+
+def classify_level(score: float) -> str:
     if score < 45:
         return "Junior"
-    if score < 70:
+    if score <= 70:
         return "Mid"
     return "Senior"
 
 
-def build_summary(job_scores: List[Dict[str, Any]]) -> Dict[str, Any]:
-    if not job_scores:
-        return {"title": "Données insuffisantes", "confidence": 0, "short_explanation": "Fournis plus d'informations."}
-    top = job_scores[0]
-    level = derive_level(top.get("score", 0.0))
+def _inputs_resume(inputs: Mapping[str, Any]) -> Dict[str, Any]:
+    likert_vals = [v for v in (inputs.get("likert", {}) or {}).values() if isinstance(v, (int, float))]
+    texts = inputs.get("texts", []) or []
     return {
-        "title": f"{top.get('job_name', 'Profil')} ({level})",
-        "confidence": top.get("score", 0.0),
-        "short_explanation": f"Principalement basé sur les compétences requises pour {top.get('job_name')} et ton niveau {level}.",
+        "nb_skills_selected": len(inputs.get("selected_skills", []) or []),
+        "nb_tools": len(inputs.get("tools", []) or []),
+        "avg_auto_eval": round(mean(likert_vals), 2) if likert_vals else 0.0,
+        "nb_texts": len(texts),
+        "total_text_len": sum(len(t) for t in texts),
     }
 
 
-def generate_texts(job_scores: List[Dict[str, Any]], skill_scores: List[Dict[str, Any]]) -> Tuple[str, str]:
-    top_job = job_scores[0] if job_scores else None
-    top_skills = skill_scores[:5]
-    bio = ""
-    explanation = ""
-    if is_ollama_available():
+def _generate_texts(top_job: Dict[str, Any] | None, top_skills: Sequence[Dict[str, Any]], use_ollama: bool = True) -> Tuple[str, str]:
+    job_label = top_job.get("job_name") if top_job else "profil"
+    skill_snippet = ", ".join([s.get("skill_name", "") for s in top_skills])
+
+    if use_ollama and is_ollama_available():
         try:
             prompt_bio = (
-                "Rédige une courte bio (4-6 lignes) basée sur le métier recommandé et les compétences.")
-            prompt_bio += f"\nMétier top: {top_job}\nCompétences top: {top_skills}"
+                "Rédige une bio professionnelle concise (4-6 lignes) en français."
+                " Base-toi uniquement sur le métier et les compétences listées."
+                " Style: clair, à la première personne."
+                f"\nMétier recommandé: {job_label}\nCompétences fortes: {skill_snippet}"
+            )
             bio = generate_with_cache("bio_v2", prompt_bio)
-            prompt_exp = "Explique brièvement pourquoi ces métiers sont recommandés en citant les compétences fortes."
-            prompt_exp += f"\nTop métiers: {job_scores[:3]}\nTop compétences: {top_skills}"
+
+            prompt_exp = (
+                "Explique en 3 phrases pourquoi ce métier est recommandé."
+                " Cite 3 compétences fortes et précise le niveau (Junior/Mid/Senior)."
+                f"\nMétier: {job_label}\nCompétences fortes: {skill_snippet}"
+            )
             explanation = generate_with_cache("exp_v2", prompt_exp)
+            return bio, explanation
         except GenAIUnavailable:
-            bio = "Bio non générée (Ollama indisponible)."
-            explanation = "Ollama indisponible, explication simplifiée."
-    else:
-        bio = "Bio non générée (Ollama indisponible)."
-        explanation = "Explication locale : les métiers sont classés selon la correspondance des compétences requises."
-    return bio, explanation
+            pass
+
+    fallback_bio = (
+        f"Je me positionne sur le rôle {job_label}. "
+        f"Mes forces principales: {skill_snippet}. "
+        "Je cherche à capitaliser sur ces compétences et à les renforcer par des projets concrets."
+    )
+    fallback_exp = (
+        f"Le métier {job_label} ressort car tes compétences requises sont majoritairement couvertes, "
+        "avec un mix auto-évaluation, sélection explicite et signaux texte."
+    )
+    return fallback_bio, fallback_exp
 
 
-def run_scoring_v2(scoring_inputs: ScoringInputsV2) -> Dict[str, Any]:
+def run_analysis_v2(inputs: Mapping[str, Any], jobs: Sequence[Dict[str, Any]] | None = None, skills: Sequence[Dict[str, Any]] | None = None, use_ollama: bool = True) -> Dict[str, Any]:
     start = time.time()
-    inputs_struct = build_inputs_from_session(scoring_inputs.responses)
-    sig = sha_signature(inputs_struct)
 
-    skill_scores = compute_skill_scores(inputs_struct, scoring_inputs.skills)
-    job_scores = compute_job_scores(skill_scores, scoring_inputs.jobs)
-    summary = build_summary(job_scores)
+    structured_inputs = inputs if "likert" in inputs else build_inputs_from_session_state(inputs)
+    skills_data = list(skills) if skills is not None else load_skills()
+    jobs_data = list(jobs) if jobs is not None else load_jobs()
 
-    bio, explanation = generate_texts(job_scores, skill_scores)
+    skill_scores = compute_skill_scores(structured_inputs, skills_data)
+    job_scores = compute_job_scores(skill_scores, jobs_data)
+    top_job = job_scores[0] if job_scores else None
+    coverage = compute_coverage(top_job, skill_scores)
+    level = classify_level(top_job.get("score", 0.0)) if top_job else "N/A"
+
+    bio, explanation = _generate_texts(top_job, skill_scores[:5], use_ollama=use_ollama)
 
     duration = time.time() - start
-    return {
+    input_sig = compute_input_signature(structured_inputs)
+
+    summary_profile = {
+        "title": top_job.get("job_name", "Profil") if top_job else "Profil non défini",
+        "level": level,
+        "short_explanation": explanation,
+    }
+
+    analysis = {
         "meta": {
-            "version": "v2",
+            "version": "scoring_v2",
             "run_at": datetime.now().isoformat(),
-            "input_signature": sig,
-            "duration_sec": duration,
-            "model": "ollama" if is_ollama_available() else "none",
+            "input_signature": input_sig,
+            "duration_sec": round(duration, 3),
+            "use_ollama": bool(use_ollama and is_ollama_available()),
         },
-        "inputs_resume": {
-            "nb_skills_selected": len(inputs_struct.get("selected_skills", [])),
-            "nb_texts": len(inputs_struct.get("texts", [])),
-            "avg_text_len": (
-                sum(len(t) for t in inputs_struct.get("texts", [])) / len(inputs_struct.get("texts", []))
-                if inputs_struct.get("texts")
-                else 0
-            ),
-        },
+        "inputs_resume": _inputs_resume(structured_inputs),
         "job_scores": job_scores,
         "skill_scores": skill_scores,
-        "coverage_score": job_scores[0].get("coverage", 0.0) if job_scores else 0.0,
-        "summary_profile": {**summary, "long_explanation": explanation},
+        "coverage_score": coverage,
+        "summary_profile": summary_profile,
         "professional_bio": bio,
         "debug": {
-            "inputs_struct": inputs_struct,
-            "skill_scores": skill_scores,
-            "job_scores": job_scores,
+            "input_signature": input_sig,
+            "top_job": top_job,
+            "top_jobs": job_scores[:5],
+            "top_skills": skill_scores[:10],
+            "inputs": structured_inputs,
         },
     }
+    return analysis
+
+
+def self_check():
+    jobs = load_jobs()
+    skills = load_skills()
+
+    profiles = {
+        "data_analyst": {
+            "likert": {
+                "da_analysis_level": 5,
+                "da_viz_level": 5,
+                "da_biz_level": 4,
+                "python_level": 3,
+                "comms_level": 4,
+            },
+            "selected_skills": ["sql", "tableau", "data viz"],
+            "tools": ["sql", "power bi"],
+            "texts": ["Tableaux de bord SQL/Tableau, définition de KPI produit"],
+            "experiences": [],
+        },
+        "mlops_engineer": {
+            "likert": {
+                "python_level": 5,
+                "ml_level": 5,
+                "etl_level": 4,
+                "comms_level": 3,
+            },
+            "selected_skills": ["docker", "ci cd", "mlflow", "kubernetes"],
+            "tools": ["docker", "k8s", "mlflow"],
+            "texts": ["Mise en prod de modèles avec Docker, CI/CD, suivi MLflow, monitoring"],
+            "experiences": [],
+        },
+        "backend_engineer": {
+            "likert": {
+                "python_level": 5,
+                "da_analysis_level": 3,
+                "comms_level": 3,
+            },
+            "selected_skills": ["api", "auth", "tests", "database"],
+            "tools": ["fastapi", "postgres"],
+            "texts": ["APIs REST sécurisées (JWT), tests unitaires, design système léger"],
+            "experiences": [],
+        },
+    }
+
+    for name, profile in profiles.items():
+        result = run_analysis_v2(profile, jobs=jobs, skills=skills, use_ollama=False)
+        top_job_id = (result.get("job_scores") or [{}])[0].get("job_id")
+        print(name, "=>", top_job_id)
 
 
 __all__ = [
-    "ScoringInputsV2",
-    "run_scoring_v2",
-    "load_jobs_v2",
-    "load_skills_v2",
-    "build_inputs_from_session",
+    "load_jobs",
+    "load_skills",
+    "compute_input_signature",
+    "build_inputs_from_session_state",
+    "compute_skill_scores",
+    "compute_job_scores",
+    "compute_coverage",
+    "classify_level",
+    "run_analysis_v2",
+    "self_check",
 ]

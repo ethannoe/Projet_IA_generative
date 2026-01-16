@@ -1,4 +1,3 @@
-import hashlib
 import json
 import os
 import time
@@ -9,10 +8,11 @@ import pandas as pd
 import streamlit as st
 
 from src.utils.scoring_v2 import (
-    ScoringInputsV2,
-    load_jobs_v2,
-    load_skills_v2,
-    run_scoring_v2,
+    build_inputs_from_session_state,
+    compute_input_signature,
+    load_jobs,
+    load_skills,
+    run_analysis_v2,
 )
 from ui.components import inject_css, stepper
 
@@ -58,12 +58,12 @@ GUIDED_LABELS = {
 
 @st.cache_data
 def load_jobs_cached_v2():
-    return load_jobs_v2()
+    return load_jobs()
 
 
 @st.cache_data
 def load_skills_cached_v2():
-    return load_skills_v2()
+    return load_skills()
 
 
 def init_state():
@@ -119,17 +119,8 @@ def persist_responses(responses: Dict):
     return json_path, csv_path
 
 
-def compute_signature(responses: Dict) -> str:
-    try:
-        payload = json.dumps(responses, sort_keys=True, ensure_ascii=False)
-    except TypeError:
-        payload = str(responses)
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
-
-
 def run_analysis():
     responses = st.session_state.get("responses", {})
-    signature = compute_signature(responses)
 
     jobs = load_jobs_cached_v2()
     skills = load_skills_cached_v2()
@@ -137,20 +128,18 @@ def run_analysis():
     if not responses:
         raise ValueError("Aucun contenu saisi. Merci de renseigner les sections précédentes.")
 
+    inputs = build_inputs_from_session_state(st.session_state)
+    signature = compute_input_signature(inputs)
     start_time = time.time()
-    scoring_inputs = ScoringInputsV2(responses=responses, jobs=jobs, skills=skills, use_ollama=True)
-    scores = run_scoring_v2(scoring_inputs)
+    result = run_analysis_v2(inputs, jobs=jobs, skills=skills, use_ollama=True)
     duration = time.time() - start_time
-
-    result = {
-        **scores,
-        "meta": {**scores.get("meta", {}), "input_signature": signature, "duration_sec": duration},
-    }
+    result.setdefault("meta", {})
+    result["meta"]["input_signature"] = signature
+    result["meta"].setdefault("duration_sec", round(duration, 3))
 
     persist_responses(responses)
 
     st.session_state["analysis_result_v2"] = result
-    st.session_state["analysis_input_signature_v2"] = signature
     # Nettoyage des anciennes clés pour éviter les collisions
     for legacy in ["analysis", "analysis_result", "analysis_signature", "analysis_input_signature"]:
         if legacy in st.session_state:
@@ -168,7 +157,7 @@ def main():
     )
 
     if st.button("Lancer l'analyse", type="primary"):
-        with st.spinner("Calcul des embeddings et des scores..."):
+        with st.spinner("Calcul des scores déterministes..."):
             try:
                 run_analysis()
                 st.session_state["analysis_error"] = None
