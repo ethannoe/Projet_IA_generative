@@ -1,0 +1,27 @@
+# Environnements et dépendances locales
+.venv/
+.env
+.env.*
+
+# Caches applicatifs / modèles
+.cache/
+.models/
+__pycache__/
+*.py[cod]
+
+# Données générées par l'app
+outputs/
+
+# Outils et IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Tests / outillage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Divers
+*.log
+*.db
