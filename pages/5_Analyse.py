@@ -111,7 +111,7 @@ def persist_responses(responses: Dict):
     csv_path = os.path.join("outputs", f"user_responses_{timestamp}.csv")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(responses, f, ensure_ascii=False, indent=2)
-    # flatten for csv
+    # Aplatir les réponses pour le CSV
     flat = []
     for k, v in responses.items():
         flat.append({"question": k, "response": json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v})

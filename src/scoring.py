@@ -18,7 +18,7 @@ def aggregate_block_scores(
     """
     block_scores: Dict[str, List[float]] = {b["block_id"]: [] for b in blocks}
 
-    # Similarity matrix shape: (num_user_texts, num_skills)
+    # Matrice de similarité : (nb_textes_utilisateur, nb_compétences)
     for block in blocks:
         block_id = block["block_id"]
         skill_indices = [i for i, (bid, _) in enumerate(skill_mapping) if bid == block_id]
@@ -27,7 +27,7 @@ def aggregate_block_scores(
             continue
         # Pour chaque texte utilisateur, on prend le max des compétences du bloc
         best_per_text = []
-        for row in similarity_matrix:  # row shape: (num_skills,)
+        for row in similarity_matrix:  # forme de la ligne : (nb_compétences,)
             sims_block = row[skill_indices]
             best_per_text.append(float(sims_block.max()))
         block_scores[block_id] = best_per_text
@@ -74,8 +74,8 @@ def warn_indistinguishable_jobs(jobs: List[Dict]) -> None:
 def rank_jobs(block_scores: Dict[str, float], jobs: List[Dict]) -> List[Tuple[str, float, str, List[Tuple[str, float, float, float]]]]:
     """
     Retourne une liste triée (job_name, score, justification, contributions)
-    where contributions = [(block_id, block_score, weight, contribution)]
-    and score = sum(weight * block_score) / sum(weight) sur les blocs requis.
+    où contributions = [(block_id, block_score, weight, contribution)]
+    et score = sum(weight * block_score) / sum(weight) sur les blocs requis.
     """
     warn_indistinguishable_jobs(jobs)
     ranked: List[Tuple[str, float, str, List[Tuple[str, float, float, float]]]] = []

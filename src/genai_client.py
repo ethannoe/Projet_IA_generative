@@ -32,7 +32,7 @@ def _ollama_generate(prompt: str, model: str = DEFAULT_MODEL, temperature: float
     try:
         resp = requests.post(f"{OLLAMA_ENDPOINT}/api/generate", json=payload, timeout=120, stream=False)
         resp.raise_for_status()
-        # Ollama returns streaming chunks; api/generate returns text with newlines containing `data: {...}`
+    # Ollama renvoie des chunks en streaming ; api/generate retourne du texte avec des lignes `data: {...}`
         text_parts = []
         for line in resp.iter_lines():
             if not line:
@@ -65,7 +65,7 @@ def _ollama_generate(prompt: str, model: str = DEFAULT_MODEL, temperature: float
 
 
 def _llama_cpp_fallback(prompt: str) -> str:
-    # Minimal fallback using llama.cpp cli if available in PATH
+    # Repli minimal via llama.cpp en ligne de commande si disponible dans le PATH
     cli = os.environ.get("LLAMACPP_CLI", "llama-cli")
     try:
         out = subprocess.check_output([cli, "-p", prompt], timeout=60)
@@ -94,7 +94,7 @@ def generate_with_cache(task: str, prompt: str, model: str = DEFAULT_MODEL, temp
     return output
 
 
-# Prompt templates with anti-hallucination instructions
+# Modèles de prompts avec consignes anti-hallucination
 
 def build_enrichment_prompt(user_text: str, context: str) -> str:
     return (

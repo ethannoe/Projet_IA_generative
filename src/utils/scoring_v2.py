@@ -15,7 +15,7 @@ DATA_DIR = ROOT_DIR / "data"
 DATA_JOBS_PATH = DATA_DIR / "jobs_v2.json"
 DATA_SKILLS_PATH = DATA_DIR / "skills_v2.json"
 
-# Mapping likert keys to skills for auto-évaluation contribution
+# Correspondance des clés Likert vers les compétences pour la contribution d'auto-évaluation
 SKILL_LIKERT_MAP: Dict[str, str] = {
     "sql": "da_analysis_level",
     "bi_tools": "da_viz_level",
@@ -63,7 +63,7 @@ SKILL_LIKERT_MAP: Dict[str, str] = {
     "requirements": "pm_level",
 }
 
-# Additional keyword hints for text and selection matches
+# Mots-clés additionnels pour améliorer la détection dans les textes et sélections
 KEYWORD_OVERRIDES: Dict[str, List[str]] = {
     "bi_tools": ["powerbi", "tableau", "looker", "bi"],
     "data_viz": ["visualisation", "dashboard", "chart"],
@@ -135,7 +135,7 @@ def _auto_eval_score(value: Any) -> float:
     except (TypeError, ValueError):
         return 0.0
     v_clamped = min(5.0, max(1.0, v))
-    return ((v_clamped - 1.0) / 4.0) * 70.0  # 0..70
+    return ((v_clamped - 1.0) / 4.0) * 70.0  # échelle 0..70
 
 
 def _skill_keywords(skill: Dict[str, Any]) -> List[str]:

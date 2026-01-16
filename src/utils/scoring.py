@@ -23,7 +23,7 @@ class ScoringInputs:
 
 
 def _normalize_similarity(similarity_matrix: np.ndarray) -> np.ndarray:
-    # Force floats and clip to [0,1] to avoid negative cosine values polluting scores
+    # Imposer des floats et borner à [0,1] pour éviter que des cosinus négatifs ne biaisent les scores
     return np.clip(similarity_matrix.astype(float), 0.0, 1.0)
 
 
@@ -46,7 +46,7 @@ def compute_block_scores_with_details(
         skill_indices = [i for i, (bid, _) in enumerate(skill_mapping) if bid == block_id]
         if not skill_indices:
             continue
-        # max similarity per user text for this block
+    # Similarité maximale par texte utilisateur pour ce bloc
         per_text_max = similarity_matrix[:, skill_indices].max(axis=1)
         details[block_id] = {
             "skill_indices": skill_indices,

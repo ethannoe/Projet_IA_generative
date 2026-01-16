@@ -202,13 +202,13 @@ def format_plan_to_html(plan_text: str) -> str:
 
     for ln in lines:
         esc = html.escape(ln)
-        # Headings
+    # Titres de section
         if ln.endswith(":") or (len(ln) <= 40 and ln.lower() == ln.replace(":", "").lower() and ln.endswith(":")):
             flush_list()
             blocks.append(f"<h4>{esc}</h4>")
             continue
 
-        # Ordered list detection
+    # Détection de liste ordonnée
         if ln[:2].isdigit() and (ln[1:2] in [".", ")"]):
             if list_type != "ol":
                 flush_list()
@@ -218,7 +218,7 @@ def format_plan_to_html(plan_text: str) -> str:
             current_list.append(content)
             continue
 
-        # Unordered list detection
+    # Détection de liste non ordonnée
         if ln.startswith(("- ", "• ")) or (len(ln) > 1 and ln[0] in ["-", "•"] and ln[1] == " "):
             if list_type != "ul":
                 flush_list()
@@ -228,7 +228,7 @@ def format_plan_to_html(plan_text: str) -> str:
             current_list.append(content)
             continue
 
-        # Paragraph
+    # Paragraphe
         flush_list()
         blocks.append(f"<p>{esc}</p>")
 
@@ -248,7 +248,7 @@ def build_results_html(analysis_data: dict, bio_text: str | None, plan_text: str
         top_job = job_scores[0] if job_scores else {}
         coverage = analysis_data.get("coverage_score")
 
-        # Tables
+    # Tables HTML rendues dans le rapport
         jobs_rows = "".join(
             [
                 f"<tr><td>{i+1}</td><td>{html.escape(str(j.get('job_name','')))}</td><td>{fmt_num(j.get('score'))}</td></tr>"
